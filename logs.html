@@ -1,5 +1,46 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Logs</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,sans-serif;-webkit-tap-highlight-color:transparent;scrollbar-width:none}::-webkit-scrollbar{display:none}body{min-height:100vh;padding:20px;color:#fff;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;background:url(images/uNWSHGy.png) center/cover no-repeat;z-index:-1}.wrap{max-width:900px;margin:auto}#info{text-align:center;margin:10px 0 20px;font-size:clamp(18px,3vw,26px)}#back{display:none;padding:9px 22px;margin-bottom:16px;border-radius:20px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer}#back:active{background:rgba(255,255,255,.35)}.dev{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px) saturate(180%);-webkit-backdrop-filter:blur(8px) saturate(180%);border:1px solid rgba(255,255,255,.15);border-radius:15px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.3s}.dev:hover{background:rgba(255,255,255,.2)}.dev small{display:block;margin-top:4px;color:rgba(255,255,255,.55);font-size:12px}.cnt{background:linear-gradient(135deg,#583d91,#7e5cd9);border-radius:14px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}.log{background:rgba(255,255,255,.08);backdrop-filter:blur(2px);border-radius:12px;padding:11px 14px;margin-bottom:8px;font-weight:500}.log small{display:block;margin-top:3px;color:rgba(255,255,255,.5);font-size:12px;font-weight:400}</style></head><body><div class="wrap"><button id="back">← Back</button><h3 id="info">Loading...</h3><div id="list"></div></div><script type="module">import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Logs</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Roboto",sans-serif;-webkit-tap-highlight-color:transparent;scrollbar-width:none}
+*::-webkit-scrollbar{display:none}
+body{min-height:100vh;padding:20px;color:#fff;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:url(images/uNWSHGy.png) center/cover no-repeat;z-index:-1}
+.wrap{max-width:900px;margin:auto}
+#info{text-align:center;margin:10px 0 20px;font-size:clamp(18px,3vw,26px)}
+#back{display:none;padding:9px 22px;margin-bottom:16px;border-radius:20px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+#back:active{background:rgba(255,255,255,.35)}
+#tabs{display:flex;justify-content:center;gap:10px;margin-bottom:18px}
+.tab{padding:8px 20px;border-radius:20px;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.tab.on{background:linear-gradient(135deg,#583d91,#7e5cd9)}
+.dev{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px) saturate(180%);-webkit-backdrop-filter:blur(8px) saturate(180%);border:1px solid rgba(255,255,255,.15);border-radius:15px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.3s}
+.dev:hover{background:rgba(255,255,255,.2)}
+.dev.trashed{cursor:default;opacity:.85}
+.dev small{display:block;margin-top:4px;color:rgba(255,255,255,.55);font-size:12px}
+.left{min-width:0;flex:1}
+.left b{font-weight:600;word-break:break-word}
+.right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.cnt{background:linear-gradient(135deg,#583d91,#7e5cd9);border-radius:14px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.ico{width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ico:active{background:rgba(255,255,255,.35)}
+.ico.red{background:rgba(220,70,70,.35)}
+.ico.green{background:rgba(60,180,110,.4)}
+.empty{text-align:center;color:rgba(255,255,255,.6);padding:40px 0}
+.log{background:rgba(255,255,255,.08);backdrop-filter:blur(2px);border-radius:12px;padding:11px 14px;margin-bottom:8px;font-weight:500}
+.log small{display:block;margin-top:3px;color:rgba(255,255,255,.5);font-size:12px;font-weight:400}
+</style></head><body>
+<div class="wrap">
+<button id="back">← Back</button>
+<h3 id="info">Loading...</h3>
+<div id="tabs" style="display:none">
+  <button class="tab on" id="tabDev">Devices</button>
+  <button class="tab" id="tabTrash">Trash</button>
+</div>
+<div id="list"></div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, query, orderBy, limit, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyD37IAgC4G7EassROnD84qUPg5V6BtfrnY",
@@ -19,9 +60,12 @@ function ua(s = "") {
   return os + " · " + br;
 }
 const fmt = t => t ? t.toDate().toLocaleString() : "";
-const info = document.getElementById("info"), list = document.getElementById("list"), back = document.getElementById("back");
+const info = document.getElementById("info"), list = document.getElementById("list"),
+      back = document.getElementById("back"), tabs = document.getElementById("tabs"),
+      tabDev = document.getElementById("tabDev"), tabTrash = document.getElementById("tabTrash");
 
 try {
+  // ---- plays ----
   const snap = await getDocs(query(collection(db, "plays"), orderBy("time", "desc"), limit(1000)));
   const devs = {};
   snap.forEach(d => {
@@ -31,28 +75,97 @@ try {
   });
   const arr = Object.values(devs);
 
+  // ---- device meta (name + trashed) stored in "devices" collection ----
+  const meta = {};
+  try {
+    const ms = await getDocs(collection(db, "devices"));
+    ms.forEach(d => meta[d.id] = d.data());
+  } catch (e) { alert("devices collection পড়া যায়নি: " + e.message); }
+
+  async function saveMeta(id, patch) {
+    meta[id] = { ...(meta[id] || {}), ...patch };
+    try {
+      await setDoc(doc(db, "devices", id), patch, { merge: true });
+    } catch (e) { alert("Save হয়নি: " + e.message); }
+  }
+
+  const isTrashed = g => !!meta[g.id]?.trashed;
+  const nameOf = g => meta[g.id]?.name || (g.id.slice(0, 8) + " — " + ua(g.ua));
+
+  let view = "list";   // "list" | "trash" | "device"
+  let tab = "list";    // last list tab
+
+  function setTabs() {
+    tabDev.classList.toggle("on", tab === "list");
+    tabTrash.classList.toggle("on", tab === "trash");
+    const n = arr.filter(isTrashed).length;
+    tabTrash.textContent = "Trash" + (n ? " (" + n + ")" : "");
+  }
+
+  function iconBtn(txt, cls, title, fn) {
+    const b = document.createElement("button");
+    b.className = "ico " + cls; b.textContent = txt; b.title = title;
+    b.onclick = e => { e.stopPropagation(); fn(); };
+    return b;
+  }
+
   function showList() {
+    view = tab;
     back.style.display = "none";
-    info.textContent = arr.length + " devices · " + snap.size + " plays";
+    tabs.style.display = "flex";
+    setTabs();
+    const trashMode = tab === "trash";
+    const items = arr.filter(g => isTrashed(g) === trashMode);
+    const active = arr.filter(g => !isTrashed(g));
+    info.textContent = trashMode
+      ? items.length + " in trash"
+      : active.length + " devices · " + active.reduce((s, g) => s + g.logs.length, 0) + " plays";
     list.innerHTML = "";
-    arr.forEach(g => {
+    if (!items.length) {
+      const e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = trashMode ? "Trash is empty" : "No devices";
+      list.appendChild(e);
+      return;
+    }
+    items.forEach(g => {
       const div = document.createElement("div");
-      div.className = "dev";
+      div.className = "dev" + (trashMode ? " trashed" : "");
       const left = document.createElement("div");
-      left.innerHTML = "<span></span><small></small>";
-      left.children[0].textContent = g.id.slice(0, 8) + " — " + ua(g.ua);
+      left.className = "left";
+      left.innerHTML = "<b></b><small></small>";
+      left.children[0].textContent = nameOf(g);
       left.children[1].textContent = "Last: " + fmt(g.last) + (g.ip ? " · " + g.ip : "") + (g.loc ? " · " + g.loc : "");
+      const right = document.createElement("div");
+      right.className = "right";
       const c = document.createElement("span");
       c.className = "cnt"; c.textContent = g.logs.length + " plays";
-      div.append(left, c);
-      div.onclick = () => showDevice(g);
+      right.appendChild(c);
+      right.appendChild(iconBtn("✎", "", "Rename", () => rename(g)));
+      if (trashMode) {
+        right.appendChild(iconBtn("↺", "green", "Restore", async () => { await saveMeta(g.id, { trashed: false }); showList(); }));
+      } else {
+        right.appendChild(iconBtn("🗑", "red", "Move to trash", async () => { await saveMeta(g.id, { trashed: true }); showList(); }));
+        div.onclick = () => showDevice(g);
+      }
+      div.append(left, right);
       list.appendChild(div);
     });
   }
 
+  async function rename(g) {
+    const cur = meta[g.id]?.name || "";
+    const v = prompt("নতুন নাম লিখো (খালি রাখলে আগের নাম ফিরে আসবে):", cur);
+    if (v === null) return;
+    await saveMeta(g.id, { name: v.trim() });
+    if (view === "device") info.textContent = nameOf(g); else showList();
+  }
+
   function showDevice(g) {
+    view = "device";
     back.style.display = "inline-block";
-    info.textContent = g.id.slice(0, 8) + " — " + ua(g.ua);
+    tabs.style.display = "none";
+    info.textContent = nameOf(g);
     list.innerHTML = "";
     g.logs.forEach(x => {
       const d = document.createElement("div");
@@ -66,5 +179,8 @@ try {
   }
 
   back.onclick = showList;
+  tabDev.onclick = () => { tab = "list"; showList(); };
+  tabTrash.onclick = () => { tab = "trash"; showList(); };
   showList();
-} catch (e) { alert(e.message); }</script></body></html>
+} catch (e) { alert(e.message); }
+</script></body></html>
