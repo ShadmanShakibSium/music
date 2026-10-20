@@ -70,10 +70,17 @@ try {
   const devs = {};
   snap.forEach(d => {
     const x = d.data(), id = x.device || "unknown";
-    const g = devs[id] ||= { id, ua: x.ua, last: x.time, ip: x.ip, loc: [x.city, x.country].filter(Boolean).join(", "), isp: x.isp, logs: [] };
+    const g = devs[id] ||= { id, ua: x.ua, user: x.user, last: x.time, ip: x.ip, loc: [x.city, x.country].filter(Boolean).join(", "), isp: x.isp, logs: [] };
     g.logs.push(x);
   });
   const arr = Object.values(devs);
+  const used = {};
+arr.forEach(g => g.first = g.logs[g.logs.length - 1].time?.toMillis() || 0);
+[...arr].sort((a, b) => a.first - b.first).forEach(g => {
+  if (!g.user) return;
+  used[g.user] = (used[g.user] || 0) + 1;
+  g.label = used[g.user] > 1 ? g.user + " " + used[g.user] : g.user;
+});
 
   // ---- device meta (name + trashed) stored in "devices" collection ----
   const meta = {};
@@ -90,7 +97,7 @@ try {
   }
 
   const isTrashed = g => !!meta[g.id]?.trashed;
-  const nameOf = g => meta[g.id]?.name || (g.id.slice(0, 8) + " — " + ua(g.ua));
+  const nameOf = g => meta[g.id]?.name || (g.label ? g.label + " — " : "") + g.id.slice(0, 8) + " — " + ua(g.ua);
 
   let view = "list";   // "list" | "trash" | "device"
   let tab = "list";    // last list tab
