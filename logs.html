@@ -1,0 +1,70 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Logs</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box;font-family:Roboto,sans-serif;-webkit-tap-highlight-color:transparent;scrollbar-width:none}::-webkit-scrollbar{display:none}body{min-height:100vh;padding:20px;color:#fff;overflow-x:hidden}body::before{content:"";position:fixed;inset:0;background:url(images/uNWSHGy.png) center/cover no-repeat;z-index:-1}.wrap{max-width:900px;margin:auto}#info{text-align:center;margin:10px 0 20px;font-size:clamp(18px,3vw,26px)}#back{display:none;padding:9px 22px;margin-bottom:16px;border-radius:20px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer}#back:active{background:rgba(255,255,255,.35)}.dev{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px) saturate(180%);-webkit-backdrop-filter:blur(8px) saturate(180%);border:1px solid rgba(255,255,255,.15);border-radius:15px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:.3s}.dev:hover{background:rgba(255,255,255,.2)}.dev small{display:block;margin-top:4px;color:rgba(255,255,255,.55);font-size:12px}.cnt{background:linear-gradient(135deg,#583d91,#7e5cd9);border-radius:14px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}.log{background:rgba(255,255,255,.08);backdrop-filter:blur(2px);border-radius:12px;padding:11px 14px;margin-bottom:8px;font-weight:500}.log small{display:block;margin-top:3px;color:rgba(255,255,255,.5);font-size:12px;font-weight:400}</style></head><body><div class="wrap"><button id="back">← Back</button><h3 id="info">Loading...</h3><div id="list"></div></div><script type="module">import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyD37IAgC4G7EassROnD84qUPg5V6BtfrnY",
+  authDomain: "songarchive-e8043.firebaseapp.com",
+  projectId: "songarchive-e8043",
+  storageBucket: "songarchive-e8043.firebasestorage.app",
+  messagingSenderId: "403499459949",
+  appId: "1:403499459949:web:45d4384227b02bf8286664"
+});
+const db = getFirestore(app);
+
+function ua(s = "") {
+  const os = /Android/.test(s) ? "Android" : /iPhone|iPad/.test(s) ? "iOS" :
+    /Windows/.test(s) ? "Windows" : /Mac/.test(s) ? "Mac" : /Linux/.test(s) ? "Linux" : "Unknown";
+  const br = /Edg\//.test(s) ? "Edge" : /OPR\//.test(s) ? "Opera" : /Chrome/.test(s) ? "Chrome" :
+    /Firefox/.test(s) ? "Firefox" : /Safari/.test(s) ? "Safari" : "Browser";
+  return os + " · " + br;
+}
+const fmt = t => t ? t.toDate().toLocaleString() : "";
+const info = document.getElementById("info"), list = document.getElementById("list"), back = document.getElementById("back");
+
+try {
+  const snap = await getDocs(query(collection(db, "plays"), orderBy("time", "desc"), limit(1000)));
+  const devs = {};
+  snap.forEach(d => {
+    const x = d.data(), id = x.device || "unknown";
+    const g = devs[id] ||= { id, ua: x.ua, last: x.time, ip: x.ip, loc: [x.city, x.country].filter(Boolean).join(", "), isp: x.isp, logs: [] };
+    g.logs.push(x);
+  });
+  const arr = Object.values(devs);
+
+  function showList() {
+    back.style.display = "none";
+    info.textContent = arr.length + " devices · " + snap.size + " plays";
+    list.innerHTML = "";
+    arr.forEach(g => {
+      const div = document.createElement("div");
+      div.className = "dev";
+      const left = document.createElement("div");
+      left.innerHTML = "<span></span><small></small>";
+      left.children[0].textContent = g.id.slice(0, 8) + " — " + ua(g.ua);
+      left.children[1].textContent = "Last: " + fmt(g.last) + (g.ip ? " · " + g.ip : "") + (g.loc ? " · " + g.loc : "");
+      const c = document.createElement("span");
+      c.className = "cnt"; c.textContent = g.logs.length + " plays";
+      div.append(left, c);
+      div.onclick = () => showDevice(g);
+      list.appendChild(div);
+    });
+  }
+
+  function showDevice(g) {
+    back.style.display = "inline-block";
+    info.textContent = g.id.slice(0, 8) + " — " + ua(g.ua);
+    list.innerHTML = "";
+    g.logs.forEach(x => {
+      const d = document.createElement("div");
+      d.className = "log";
+      d.innerHTML = "<span></span><small></small>";
+      d.children[0].textContent = x.song;
+      d.children[1].textContent = (x.artist || "") + " · " + fmt(x.time);
+      list.appendChild(d);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  back.onclick = showList;
+  showList();
+} catch (e) { alert(e.message); }</script></body></html>
